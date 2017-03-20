@@ -40,6 +40,11 @@ exports.createInMysql = function(bashPost, cb){
         });
 }
 
+exports.end = function(cb){
+    mysqldb.connection.end(function(error, results){
+        cb(error,results);
+    });
+}
 
 exports.update = function(id, newData, cb){
     db.get().collection('bash').updateOne({ _id: id}, newData, function(err, result){

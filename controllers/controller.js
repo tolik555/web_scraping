@@ -1,9 +1,11 @@
-var tress = require('../node_modules/tress/');
-var needle = require('../node_modules/needle/');
-var cheerio = require('../node_modules/cheerio/');
+var tress = require('../node_modules/tress/');// Простая в использовании асинхронная очередь заданий
+var needle = require('../node_modules/needle/');// Самый маленький и самый красивый клиент HTTP
+var cheerio = require('../node_modules/cheerio/');//jQuery для node.js
+var log = require('../node_modules/cllc')();// подключение библиотеки индикации
 var BashPost = require('../models/model');
 
 var db = require('../models/mongodb');
+
 
 //экспортируем из модели метод all и с его помощью выводим нформацию на экран
 exports.all = function(req, res){
@@ -71,19 +73,36 @@ exports.findById = function(req, res){
     })
 }
 
-exports.startParser_mysql = function(){
+exports.startParser_mysql = function(req, response){
     
     var URL = 'http://bash.im/';
     var i;
     var counter = 0;
     
+//    if (error){
+//        log.error('Ошибка в блоке отправки ответа на страницу');
+//        console.log(error);
+//        return res.sendStatus(500);
+//    }
+    response.sendStatus(200);
+    
+    //Строка сообщения о начале парсинга
+    log('Начало парсинга Bash.im');
+    //активируем строку индикации состояния
+    log.start('Найдено страниц %s, Страниц в работе %s, Сделано записей в базе %s.');
+    
+    //получаем общее количество страниц
     needle.get(URL, function(err, res){
-            if (err) throw err;
+            if (err) {
+                log.error('Ошибка в блоке получения количества страниц');
+                throw err;
+            }
             // здесь делаем парсинг страницы из res.body
                 boddy = res.body.replace(new RegExp("<br>",'g'),"\r\n");
                 var $ = cheerio.load(boddy);
                     i = $('input.page').attr('value').trim();
-                    console.log(i);
+                    //i=10;
+                    log.step(i);// выводим в индикацию общее количество страниц
         });
     
      // `tress` последовательно вызывает наш обработчик для каждой ссылки в очереди
@@ -91,7 +110,10 @@ exports.startParser_mysql = function(){
         
         //тут мы обрабатываем страницу с адресом url
         needle.get(url, function(err, res){
-            if (err) throw err;
+            if (err) {
+                log.error('Ошибка в блоке needle');
+                throw err;
+            }
             // здесь делаем парсинг страницы из res.body
                 boddy = res.body.replace(new RegExp("<br>",'g'),"\r\n");
                 var $ = cheerio.load(boddy);
@@ -107,32 +129,46 @@ exports.startParser_mysql = function(){
 
                         if(bashPost._id !== ""){
                             BashPost.createInMysql(bashPost, function(error, results){
+                                log.step(0, 0, 1); // Увеличить третий счётчик на 1.
                                 if(error){
+                                    log.error('Ошибка записи в базу!');
                                     console.log(error);
                                 }
                             })
                         }
 
-                        console.log(counter++);
+                        //counter++;
                     });
 
                 for(var g=0; g<5; g++){
                     if(i>=1){
-                    q.push('http://bash.im/index/'+i--);
+                        q.push('http://bash.im/index/'+i--);
+                        log.step(0, 1); // Увеличить второй счётчик на 1.
                     }
                 }
+            
+                //вывод в parser_mysql.ejs
+//                response.render('parser_mysql', {
+//                    parser_url: URL,
+//                    totalQuotes: i
+//                });
 
             callback(); //вызываем callback в конце
         });
     }, 10); //запускаем 10 паралельных потоков
 
-    // эта функция выполнится, когда в очереди закончатся ссылки
-    q.drain = function(){
-        console.log('finish!');
-    }
-
     // добавляем в очередь ссылку на первую страницу списка
     q.push(URL);
+    
+    // эта функция выполнится, когда в очереди закончатся ссылки
+    q.drain = function(){
+        BashPost.end(function(error, results){
+            if(error){
+                log.error('Ошибка остановки базы!');
+                console.log(error);
+            }
+        });
+    }
     
 }
 

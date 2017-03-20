@@ -6,3 +6,5 @@ exports.connection = mysql.createConnection({
         password: "",
         database: "test"
         });
+
+//exports.end = connection.destroy();
