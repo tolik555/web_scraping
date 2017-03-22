@@ -36,7 +36,6 @@ exports.create = function(bashPost, cb){
 exports.createInMysql = function(bashPost, cb){
         mysqldb.connection.query('INSERT INTO `bash` SET ?', bashPost, function (error, results, fields) {
           cb(error, results);
-            //console.log(results);
         });
 }
 
