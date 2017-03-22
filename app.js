@@ -37,6 +37,9 @@ app.get('/', bashController.indexPage_Pagination);
 app.get('/start_parser_mongodb', bashController.startParser_mongodb);
 app.get('/start_parser_mysql', bashController.startParser_mysql);
 
+//Отображение информации о текущем парсинге
+app.get('/start_parser_mysql_info', bashController.startParser_mysql_info);
+
 // получение всех исполнителеей из базы
 app.get('/posts', bashController.all);
 
