@@ -6,6 +6,11 @@ var BashPost = require('../models/model');
 
 var db = require('../models/mongodb');
 
+var URL = 'http://bash.im/', //переменные нужные для парсера
+    i=0,
+    counter = 0;
+
+
 
 //экспортируем из модели метод all и с его помощью выводим нформацию на экран
 exports.all = function(req, res){
@@ -30,6 +35,7 @@ exports.indexPage_Pagination = function(req, res){
             quotesList = [],
             from,
             to;
+        
         //genreate list of quotes
         if (typeof req.query.page !== 'undefined') {
             currentPage = +req.query.page;
@@ -73,18 +79,12 @@ exports.findById = function(req, res){
     })
 }
 
+exports.startParser_mysql_info = function(req, res){
+    var info = i;
+    res.send(counter);
+}
+
 exports.startParser_mysql = function(req, response){
-    
-    var URL = 'http://bash.im/';
-    var i;
-    var counter = 0;
-    
-//    if (error){
-//        log.error('Ошибка в блоке отправки ответа на страницу');
-//        console.log(error);
-//        return res.sendStatus(500);
-//    }
-    response.sendStatus(200);
     
     //Строка сообщения о начале парсинга
     log('Начало парсинга Bash.im');
@@ -101,9 +101,14 @@ exports.startParser_mysql = function(req, response){
                 boddy = res.body.replace(new RegExp("<br>",'g'),"\r\n");
                 var $ = cheerio.load(boddy);
                     i = $('input.page').attr('value').trim();
-                    //i=10;
                     log.step(i);// выводим в индикацию общее количество страниц
-        });
+        
+                //вывод в parser_mysql.ejs
+                response.render('parser_mysql', {
+                    parser_url: URL,
+                    totalPages: i
+                });
+    });
     
      // `tress` последовательно вызывает наш обработчик для каждой ссылки в очереди
     var q = tress(function(url, callback){
@@ -147,11 +152,6 @@ exports.startParser_mysql = function(req, response){
                     }
                 }
             
-                //вывод в parser_mysql.ejs
-//                response.render('parser_mysql', {
-//                    parser_url: URL,
-//                    totalQuotes: i
-//                });
 
             callback(); //вызываем callback в конце
         });
